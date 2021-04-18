@@ -2,30 +2,32 @@ import React from 'react';
 import {
   View,
   Text,
-  TextInput
+  TextInput,
+  Button,
 } from 'react-native';
 import Style from './../style';
 
-class Cell extends React.Component {
+class Column extends Button { // React.Component {
 
   constructor(props) {
     super(props);
     this.state = {
+      isEditing: false,
       value: props.value
     };
+
     this.onChangeText = this.onChangeText.bind(this);
   }
 
   onChangeText(e) {
     let {text} = e.nativeEvent;
-    this.setState({...this.state, value: text});
-    if (typeof this.props.onCellChange === 'function') {
-      const {
-        column,
-        row,
-        input
-      } = this.props;
-      this.props.onCellChange(text, column, row, input);
+    this.setState({ ...this.state, value: text });
+    const oldVal = { ...this.props.column };
+
+    this.props.column.value = text;
+
+    if (typeof this.props.onColumnChange === 'function') {
+      this.props.onColumnChange(text, oldVal, this.props.column);
     }
   }
 
@@ -37,21 +39,18 @@ class Cell extends React.Component {
       customStyles,
       height,
       width,
-      index,
-      span
+      index
     } = this.props;
 
     const columnStyle = [
       Style.cell,
+      Style.column,
       borderStyle,
       customStyles.cell,
+      customStyles.column,
       {height: height}
     ];
 
-    if (span) {
-      const paddingLR = 2 * span;
-      columnStyle.push({paddingLeft: paddingLR, paddingRight: paddingLR});
-    }
 
     if (width) {
       columnStyle.push({flex: width});
@@ -73,21 +72,35 @@ class Cell extends React.Component {
             style={cellStyle}
             onFocus={() => this.setState({...this.state, isEditing: true})}
             onBlue={() => this.setState({...this.state, isEditing: false})}
+            onPress={this.props.onPress}
           />
         </View>
       );
+      /*
+          <TextInput
+            value={this.state.value}
+            onChange={this.onChangeText}
+            style={cellStyle}
+            onFocus={() => this.setState({...this.state, isEditing: true})}
+            onBlue={() => this.setState({...this.state, isEditing: false})}
+          />
+        */
     }
+
+    const columnText = [
+      Style.columnText,
+      customStyles.columnText
+    ];
 
     if (index === 0) {
       columnStyle.push({alignItems: 'flex-start'});
     }
-
     return (
       <View style={columnStyle}>
-        <Text style={Style.cellText}>{value}</Text>
+        <Text style={columnText} onPress={this.props.onPress}>{value}</Text>
       </View>
     );
   }
 }
 
-export default Cell;
+export default Column;

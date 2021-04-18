@@ -1,3 +1,5 @@
+import _ from 'lodash';
+
 import React from 'react';
 import {
   View,
@@ -14,56 +16,57 @@ import Cell from './lib/Cell';
 class EditableTable extends React.Component{
 
   constructor(props){
+    super(props);
+
+    // append empty rows at the end
     if (props.emptyRows) {
-      super(props);
-      const emptyCol = {value: '', editable: true};
+      const emptyCol = { value: '', editable: true };
       for (let i = 0; i < props.emptyRows; i++) {
-        const emptyRow = new Array(4).fill({...emptyCol}, 0, this.props.columns.length);
+        const emptyRow = new Array(this.props.columns.length).fill({...emptyCol});
         this.props.values.push(emptyRow);
       }
     }
-    const sortIndex = props.columns.findIndex(c => c.hasOwnProperty('defaultSort') === true);
+
+    const sortIndex = props.columns.findIndex((column) => 'defaultSort' in column);
+    const columnWidths = props.columns.map((column) => column.width);
+
     this.state = {
-      sort: sortIndex !== undefined ? props.columns[sortIndex].defaultSort : null,
-      sortColumnIndex: sortIndex !== undefined ? sortIndex : null,
-      rows: props.values.length
+      sort: sortIndex !== -1 ? props.columns[sortIndex].defaultSort : null,
+      sortColumnIndex: sortIndex !== -1 ? sortIndex : null,
+      rows: props.values.length,
+      widths: this._calculateCellWidths(columnWidths),
     };
-
-
-    let columnWidths = props.columns.map(c => c.width);
-    this.state.widths = this._calculateCellWidths(columnWidths);
-
   }
 
   createColumns(columns) {
-    return columns.map((c, i) => {
-      let borders = {};
-      if (this.props.headerBorders) {
-        borders = this._createBorderStyles(i, columns.length);
-      }
+    return columns.map((column, i) => {
       return (
         <Column
-          {...c}
-          key={c.input}
-          column={c}
+          {...column}
+          key={column.key}
+          column={column}
           index={i}
           customStyles={this.props.customStyles}
-          borderStyle={borders}
+          borderStyle={
+            this.props.headerBorders
+              ? this._createBorderStyles(i, columns.length)
+              : {}
+          }
           onColumnChange={this.props.onColumnChange}
           height={this.props.cellHeight}
           width={this.state.widths[i]}
+          onPress={this.handleColumnClick.bind(this)}
         />
       );
     });
   }
 
   createRows(rows) {
-    const {customStyles} = this.props;
     return rows.map((row, i) => {
       const isLastRow = rows.length - 1 === i;
       const rowStyle = [
         Style.row,
-        customStyles.row,
+        this.props.customStyles.row,
         (isLastRow ? {borderBottomWidth: 0} : {})
       ];
       return (
@@ -76,9 +79,12 @@ class EditableTable extends React.Component{
 
   createRow(row, rowIndex) {
     let addColIndex = 0;
+    if (_.isObject(row)) {
+      row = _.keys(this.columns).map((key) => row[key]);
+    }
     return row.map((cell, colIndex) => {
       colIndex = colIndex + addColIndex;
-      if (cell.hasOwnProperty('span')) {
+      if (_.isObject(cell) && 'span' in cell) {
         addColIndex += cell.span - 1;
       }
       let borderStyle = {};
@@ -90,47 +96,21 @@ class EditableTable extends React.Component{
   }
 
   createCell(cell, colIndex, rowIndex, borderStyle) {
-    let columnInput = this.props.columns[colIndex].input;
-    columnInput += `-${rowIndex}-${colIndex}`;
-    if (typeof cell === 'object') {
-      let width = this.state.widths[colIndex];
-      if (cell.hasOwnProperty('span')) {
-        const span = cell.span;
-        if (span + colIndex <= this.props.columns.length) {
-          for (let i = 1; i < span; i++) {
-            width += this.state.widths[colIndex + i];
-          }
-        }
-      }
-      return (
-        <Cell
-          {...cell}
-          key={colIndex}
-          index={colIndex}
-          customStyles={this.props.customStyles}
-          borderStyle={borderStyle}
-          height={this.props.cellHeight}
-          width={width}
-          input={columnInput}
-          column={colIndex}
-          row={rowIndex}
-          onCellChange={this.props.onCellChange}
-        />
-      );
-
-    }
+    const columnInput = `${this.props.columns[colIndex].key}-${rowIndex}-${colIndex}`;
     return (
       <Cell
         value={cell}
+        editable={this.props.columns[colIndex].editable}
         key={colIndex}
-        index={colIndex}
-        customStyles={this.props.customStyles}
         borderStyle={borderStyle}
+        customStyles={this.props.customStyles}
         height={this.props.cellHeight}
         width={this.state.widths[colIndex]}
         input={columnInput}
+        index={colIndex}
         column={colIndex}
         row={rowIndex}
+        onCellChange={this.props.onCellChange}
       />
     );
   }
@@ -147,6 +127,10 @@ class EditableTable extends React.Component{
       widthFlexs.push(widths.length * (widths[i] * 0.01));
     }
     return widthFlexs;
+  }
+
+  get columns() {
+    return _.fromPairs(this.props.columns.map(({ key, value }) => [key, value]));
   }
 
   render() {
@@ -174,11 +158,16 @@ class EditableTable extends React.Component{
     );
   }
 
+  handleColumnClick(e) {
+    console.log(e);
+    const { values } = this.state;
+    // this.setState({ values: _.sortBy(values, column) });
+  }
 }
 
 EditableTable.defaultProps = {
   values: [],
-  emptyRows: 1,
+  emptyRows: 0,
   borders: false,
   headerBorders: false,
   style: {},
