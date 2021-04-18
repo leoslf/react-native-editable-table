@@ -6,7 +6,7 @@ import {
   PanResponder,
   SafeAreaView
 } from 'react-native';
-import EditableTable from './editabletable.js';
+import EditableTable from './editabletable';
 
 class editabletable extends Component{
 

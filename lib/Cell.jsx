@@ -6,25 +6,26 @@ import {
 } from 'react-native';
 import Style from './../style';
 
-class Column extends React.Component {
+class Cell extends React.Component {
 
   constructor(props) {
     super(props);
     this.state = {
-      isEditing: false,
       value: props.value
     };
-
     this.onChangeText = this.onChangeText.bind(this);
   }
 
   onChangeText(e) {
     let {text} = e.nativeEvent;
     this.setState({...this.state, value: text});
-    const oldVal = {...this.props.column};
-    this.props.column.value = text;
-    if (typeof this.props.onColumnChange === 'function') {
-      this.props.onColumnChange(text, oldVal, this.props.column);
+    if (typeof this.props.onCellChange === 'function') {
+      const {
+        column,
+        row,
+        key, 
+      } = this.props;
+      this.props.onCellChange(text, column, row, key);
     }
   }
 
@@ -36,18 +37,21 @@ class Column extends React.Component {
       customStyles,
       height,
       width,
-      index
+      index,
+      span
     } = this.props;
 
     const columnStyle = [
       Style.cell,
-      Style.column,
       borderStyle,
       customStyles.cell,
-      customStyles.column,
       {height: height}
     ];
 
+    if (span) {
+      const paddingLR = 2 * span;
+      columnStyle.push({paddingLeft: paddingLR, paddingRight: paddingLR});
+    }
 
     if (width) {
       columnStyle.push({flex: width});
@@ -74,20 +78,16 @@ class Column extends React.Component {
       );
     }
 
-    const columnText = [
-      Style.columnText,
-      customStyles.columnText
-    ];
-
     if (index === 0) {
       columnStyle.push({alignItems: 'flex-start'});
     }
+
     return (
       <View style={columnStyle}>
-        <Text style={columnText}>{value}</Text>
+        <Text style={Style.cellText}>{value}</Text>
       </View>
     );
   }
 }
 
-export default Column;
+export default Cell;
